@@ -33,6 +33,7 @@ struct map_info
     uintptr_t start;
     uintptr_t end;
     uintptr_t offset;
+    uintptr_t load_base;
     int flags;
     char *path;
 

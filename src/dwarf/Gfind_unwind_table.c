@@ -35,6 +35,38 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
 /* ANDROID support update. */
 int
+dwarf_get_load_base (struct elf_image *ei, unw_word_t mapoff, unw_word_t *load_base)
+{
+  Elf_W(Ehdr) *ehdr;
+  Elf_W(Phdr) *phdr, *ptxt = NULL;
+  int i;
+
+  /* XXX: Much of this code is Linux/LSB-specific.  */
+
+  if (!elf_w(valid_object) (ei))
+    return 0;
+
+  ehdr = ei->image;
+  phdr = (Elf_W(Phdr) *) ((char *) ei->image + ehdr->e_phoff);
+  for (i = 0; i < ehdr->e_phnum; ++i)
+    {
+      if (phdr[i].p_type == PT_LOAD && phdr[i].p_offset == mapoff)
+        {
+          ptxt = phdr + i;
+          break;
+        }
+    }
+
+  if (!ptxt)
+    return 0;
+
+  *load_base = ptxt->p_vaddr;
+  return 1;
+}
+/* End of ANDROID update. */
+
+/* ANDROID support update. */
+int
 dwarf_find_unwind_table (struct elf_dyn_info *edi, struct elf_image *ei,
 			 unw_addr_space_t as, char *path,
 			 unw_word_t segbase, unw_word_t mapoff, unw_word_t ip)
