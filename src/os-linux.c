@@ -51,6 +51,7 @@ map_create_list (pid_t pid)
       cur_map->start = start;
       cur_map->end = end;
       cur_map->offset = offset;
+      cur_map->load_base = 0;
       cur_map->flags = flags;
       cur_map->path = strdup (mi.path);
       mutex_init (&cur_map->ei_lock);
@@ -66,6 +67,21 @@ map_create_list (pid_t pid)
       if (strncmp ("/dev/", cur_map->path, 5) == 0
           && strncmp ("ashmem/", cur_map->path + 5, 7) != 0)
         cur_map->flags |= MAP_FLAGS_DEVICE_MEM;
+
+      /* If this is a readable executable map, find the load_base. */
+      if ((flags & (PROT_EXEC | PROT_READ)) == (PROT_EXEC | PROT_READ)
+          && !(cur_map->flags & MAP_FLAGS_DEVICE_MEM))
+        {
+          /* No locking needed since we are building the list here. */
+          if (elf_map_image (&cur_map->ei, cur_map->path) == 0)
+            {
+              unw_word_t load_base;
+              if (dwarf_get_load_base (&cur_map->ei, offset, &load_base) != 0)
+                cur_map->load_base = load_base;
+            }
+          else
+            cur_map->ei.image = NULL;
+        }
 
       map_list = cur_map;
     }
