@@ -46,6 +46,10 @@ libunwind_common_clang_cflags += \
     -Wno-header-guard \
     -Wno-absolute-value \
 
+# The latest clang (r230699) does not allow SP/PC to be declared in inline asm lists.
+libunwind_common_clang_cflags += \
+    -Wno-inline-asm
+
 ifneq ($(debug),true)
 libunwind_common_cflags += \
     -DHAVE_CONFIG_H \
