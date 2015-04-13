@@ -238,6 +238,8 @@ include $(LOCAL_PATH)/Android.build.mk
 libunwind_build_type := host
 include $(LOCAL_PATH)/Android.build.mk
 libunwind_build_type := target
+# Make sure the static library functions do not interfere with shared version.
+libunwind_cflags += -DUNW_ADDITIONAL_PREFIX
 libunwind_build_target := STATIC_LIBRARY
 include $(LOCAL_PATH)/Android.build.mk
 libunwind_build_type := host
@@ -314,6 +316,7 @@ libunwindbacktrace_src_files += \
 libunwindbacktrace_cflags += \
     -Wno-old-style-declaration \
     -fvisibility=hidden \
+    -DUNW_ADDITIONAL_PREFIX \
 
 libunwind_module := libunwindbacktrace
 libunwind_module_tag := optional
