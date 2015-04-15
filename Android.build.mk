@@ -75,7 +75,10 @@ LOCAL_SRC_FILES := \
     $($(libunwind_module)_src_files_$(build_type)) \
 
 $(foreach arch,$(libunwind_arches), \
-    $(eval LOCAL_SRC_FILES_$(arch) :=  $($(libunwind_module)_src_files_$(arch))))
+    $(eval LOCAL_SRC_FILES_$(arch) := $($(libunwind_module)_src_files_$(arch))))
+
+LOCAL_SRC_FILES_32 := $($(libunwind_module)_src_files_32)
+LOCAL_SRC_FILES_64 := $($(libunwind_module)_src_files_64)
 
 LOCAL_STATIC_LIBRARIES := \
     $($(libunwind_module)_static_libraries) \
