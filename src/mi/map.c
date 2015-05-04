@@ -118,8 +118,8 @@ map_destroy_list (struct map_info *map_info)
     {
       map = map_info;
       map_info = map->next;
-      if (map->ei.image != MAP_FAILED && map->ei.image != NULL)
-        munmap (map->ei.image, map->ei.size);
+      if (map->ei.mapped)
+        munmap (map->ei.u.mapped.image, map->ei.u.mapped.size);
       if (map->path)
         free (map->path);
       map_free_info (map);
