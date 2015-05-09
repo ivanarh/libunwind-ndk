@@ -121,6 +121,9 @@ unw_step (unw_cursor_t *cursor)
   struct cursor *c = (struct cursor *) cursor;
   int ret;
 
+  unw_word_t old_ip = c->dwarf.ip;
+  unw_word_t old_cfa = c->dwarf.cfa;
+
   ret = unw_handle_signal_frame (cursor);
   if (ret < 0)
     /* Not a signal frame, try DWARF-based unwinding. */
@@ -132,6 +135,15 @@ unw_step (unw_cursor_t *cursor)
   /* Dwarf unwinding didn't work, stop.  */
   if (unlikely (ret < 0))
     return 0;
+
+  /* If the decode yields the exact same ip/cfa as before, then indicate
+     the unwind is complete. */
+  if (c->dwarf.ip == old_ip && c->dwarf.cfa == old_cfa)
+    {
+      Dprintf ("%s: ip and cfa unchanged; stopping here (ip=0x%lx)\n",
+               __FUNCTION__, (long) c->dwarf.ip);
+      return -UNW_EBADFRAME;
+    }
 
   return (c->dwarf.ip == 0) ? 0 : 1;
 }
