@@ -380,9 +380,6 @@ struct dwarf_callback_data
 #define dwarf_find_proc_info		UNW_OBJ (dwarf_find_proc_info)
 #define dwarf_find_debug_frame		UNW_OBJ (dwarf_find_debug_frame)
 #define dwarf_search_unwind_table	UNW_OBJ (dwarf_search_unwind_table)
-/* ANDROID support update. */
-#define dwarf_get_load_base		UNW_OBJ (dwarf_get_load_base)
-/* End of ANDROID update. */
 #define dwarf_find_unwind_table		UNW_OBJ (dwarf_find_unwind_table)
 #define dwarf_put_unwind_info		UNW_OBJ (dwarf_put_unwind_info)
 #define dwarf_put_unwind_info		UNW_OBJ (dwarf_put_unwind_info)
@@ -412,8 +409,6 @@ extern int dwarf_search_unwind_table (unw_addr_space_t as,
 				      unw_proc_info_t *pi,
 				      int need_unwind_info, void *arg);
 /* ANDROID support update. */
-extern int dwarf_get_load_base (struct elf_image *ei, unw_word_t mapoff,
-				unw_word_t *load_base);
 extern int dwarf_find_unwind_table (struct elf_dyn_info *edi, struct elf_image *ei,
 				    unw_addr_space_t as, char *path,
 				    unw_word_t segbase, unw_word_t mapoff,

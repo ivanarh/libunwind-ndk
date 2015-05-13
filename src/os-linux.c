@@ -55,8 +55,9 @@ map_create_list (pid_t pid)
       cur_map->flags = flags;
       cur_map->path = strdup (mi.path);
       mutex_init (&cur_map->ei_lock);
-      cur_map->ei.size = 0;
-      cur_map->ei.image = NULL;
+      cur_map->ei.valid = false;
+      cur_map->ei.load_attempted = false;
+      cur_map->ei.mapped = false;
 
       /* Indicate mapped memory of devices is special and should not
          be read or written. Use a special flag instead of zeroing the
@@ -72,15 +73,12 @@ map_create_list (pid_t pid)
       if ((flags & (PROT_EXEC | PROT_READ)) == (PROT_EXEC | PROT_READ)
           && !(cur_map->flags & MAP_FLAGS_DEVICE_MEM))
         {
-          /* No locking needed since we are building the list here. */
           if (elf_map_image (&cur_map->ei, cur_map->path) == 0)
             {
               unw_word_t load_base;
-              if (dwarf_get_load_base (&cur_map->ei, offset, &load_base) != 0)
+              if (elf_w (get_load_base) (&cur_map->ei, offset, &load_base))
                 cur_map->load_base = load_base;
             }
-          else
-            cur_map->ei.image = NULL;
         }
 
       map_list = cur_map;

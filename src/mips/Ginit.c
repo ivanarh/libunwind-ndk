@@ -206,7 +206,7 @@ get_static_proc_name (unw_addr_space_t as, unw_word_t ip,
 		      void *arg)
 {
 
-  return elf_w (get_proc_name) (as, getpid (), ip, buf, buf_len, offp);
+  return elf_w (get_proc_name) (as, getpid (), ip, buf, buf_len, offp, arg);
 }
 
 HIDDEN void
