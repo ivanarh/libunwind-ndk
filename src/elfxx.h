@@ -136,6 +136,7 @@ static inline bool elf_map_image (struct elf_image* ei, const char* path) {
   ei->valid = elf_w (valid_object_mapped) (ei);
   if (!ei->valid) {
     munmap (ei->u.mapped.image, ei->u.mapped.size);
+    return false;
   }
 
   ei->mapped = true;
