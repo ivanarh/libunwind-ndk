@@ -208,24 +208,27 @@ static bool elf_w (lookup_symbol_memory) (
             if (ip >= val && (Elf_W(Addr)) (ip - val) < sym.st_size) {
               GET_SYM_FIELD(ei, sym_offset, &sym, st_name);
               uintptr_t size = ei->u.memory.map->end - ei->u.memory.map->start;
-              if (strtab_offset + sym.st_name > size) {
+              Elf_W(Off) strname_offset = strtab_offset + sym.st_name;
+              if (strname_offset > size || strname_offset < strtab_offset) {
                 // Malformed elf symbol table.
                 break;
               }
 
               size_t bytes_read = elf_w (memory_read) (
-                  ei, ei->u.memory.map->start + strtab_offset + sym.st_name,
+                  ei, ei->u.memory.map->start + strname_offset,
                   (uint8_t*) buf, buf_len, true);
               if (bytes_read == 0) {
                 // Empty name, so keep checking the other symbol tables
                 // for a possible match.
                 break;
               }
+              // Ensure the string is nul terminated, it is assumed that
+              // sizeof(buf) >= buf_len + 1.
+              buf[buf_len] = '\0';
+
               if (offp != NULL) {
                 *offp = ip - val;
               }
-              // Ensure the string is nul terminated.
-              buf[buf_len] = '\0';
               return true;
             }
           }
@@ -343,19 +346,23 @@ static bool elf_w (lookup_symbol_mapped) (
             }
             Debug (16, "0x%016lx info=0x%02x\n", (long) val, sym->st_info);
             if (ip >= val && (Elf_W(Addr)) (ip - val) < sym->st_size) {
-              if (strtab + sym->st_name > (char*) ei->u.mapped.image + ei->u.mapped.size) {
+              char* str_name = strtab + sym->st_name;
+              if (str_name > (char*) ei->u.mapped.image + ei->u.mapped.size ||
+                  str_name < strtab) {
                 // Malformed elf symbol table.
                 break;
               }
 
               // Make sure we don't try and read past the end of the image.
-              uintptr_t max_size = (uintptr_t) (strtab + sym->st_name)
-                  - (uintptr_t) ei->u.mapped.image;
+              uintptr_t max_size = (uintptr_t) str_name - (uintptr_t) ei->u.mapped.image;
               if (buf_len > max_size) {
                 buf_len = max_size;
               }
 
-              strncpy (buf, strtab + sym->st_name, buf_len);
+              strncpy (buf, str_name, buf_len);
+              // Ensure the string is nul terminated, it is assumed that
+              // sizeof(buf) >= buf_len + 1.
+              buf[buf_len] = '\0';
               if (buf[0] == '\0') {
                 // Empty name, so keep checking the other symbol tables
                 // for a possible match.
@@ -364,8 +371,6 @@ static bool elf_w (lookup_symbol_mapped) (
               if (offp != NULL) {
                 *offp = ip - val;
               }
-              // Ensure the string is nul terminated.
-              buf[buf_len] = '\0';
               return true;
             }
           }
