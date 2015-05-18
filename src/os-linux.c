@@ -73,7 +73,7 @@ map_create_list (pid_t pid)
       if ((flags & (PROT_EXEC | PROT_READ)) == (PROT_EXEC | PROT_READ)
           && !(cur_map->flags & MAP_FLAGS_DEVICE_MEM))
         {
-          if (elf_map_image (&cur_map->ei, cur_map->path) == 0)
+          if (elf_map_image (&cur_map->ei, cur_map->path))
             {
               unw_word_t load_base;
               if (elf_w (get_load_base) (&cur_map->ei, offset, &load_base))
