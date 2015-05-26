@@ -5,9 +5,7 @@
 /* #undef CONFIG_BLOCK_SIGNALS */
 
 /* Enable Debug Frame */
-#if defined(__arm__)
-#define CONFIG_DEBUG_FRAME /**/
-#endif
+#define CONFIG_DEBUG_FRAME 1
 
 /* Support for Microsoft ABI extensions */
 /* #undef CONFIG_MSABI_SUPPORT */
