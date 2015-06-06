@@ -92,7 +92,7 @@ rebuild_if_necessary (unw_word_t addr, int expected_flags)
   int ret_value = -1;
   intrmask_t saved_mask;
 
-  new_list = map_create_list (getpid());
+  new_list = map_create_list (UNW_MAP_CREATE_LOCAL, getpid());
   map = map_find_from_addr (new_list, addr);
   if (map && (expected_flags == 0 || (map->flags & expected_flags)))
     {
