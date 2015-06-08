@@ -386,18 +386,19 @@ static bool elf_w (lookup_symbol_mapped) (
   return false;
 }
 
-static Elf_W(Addr) elf_w (get_load_offset_mapped) (
-    struct elf_image *ei, unsigned long segbase, unsigned long mapoff) {
+static bool elf_w (get_load_offset_mapped) (
+    struct elf_image *ei, unsigned long segbase, unsigned long mapoff, Elf_W(Addr)* load_offset) {
   Elf_W(Ehdr) *ehdr = ei->u.mapped.image;
   Elf_W(Phdr) *phdr = (Elf_W(Phdr) *) ((char *) ei->u.mapped.image + ehdr->e_phoff);
 
   int i;
   for (i = 0; i < ehdr->e_phnum; ++i) {
     if (phdr[i].p_type == PT_LOAD && phdr[i].p_offset == mapoff) {
-      return segbase - phdr[i].p_vaddr;
+      *load_offset = segbase - phdr[i].p_vaddr;
+      return true;
     }
   }
-  return 0;
+  return false;
 }
 
 // --------------------------------------------------------------------------
@@ -423,17 +424,14 @@ static inline bool elf_w (lookup_symbol) (
   }
 }
 
-static Elf_W(Addr) elf_w (get_load_offset) (
-    struct elf_image* ei, unsigned long segbase, unsigned long mapoff, Elf_W(Ehdr)* ehdr) {
+static bool elf_w (get_load_offset) (
+    struct elf_image* ei, unsigned long segbase, unsigned long mapoff,
+    Elf_W(Ehdr)* ehdr, Elf_W(Addr)* load_offset) {
   if (ei->mapped) {
-    return elf_w (get_load_offset_mapped) (ei, segbase, mapoff);
+    return elf_w (get_load_offset_mapped) (ei, segbase, mapoff, load_offset);
   } else {
-    Elf_W(Addr) load_offset;
-    if (elf_w (get_load_offset_memory) (ei, segbase, mapoff, ehdr, &load_offset)) {
-      return load_offset;
-    }
+    return elf_w (get_load_offset_memory) (ei, segbase, mapoff, ehdr, load_offset);
   }
-  return 0;
 }
 
 #if HAVE_LZMA
@@ -557,8 +555,8 @@ HIDDEN bool elf_w (get_proc_name_in_image) (
     unw_word_t ip, char* buf, size_t buf_len, unw_word_t* offp) {
   Elf_W(Ehdr) ehdr;
   memset(&ehdr, 0, sizeof(ehdr));
-  Elf_W(Addr) load_offset = elf_w (get_load_offset) (ei, segbase, mapoff, &ehdr);
-  if (load_offset == 0) {
+  Elf_W(Addr) load_offset;
+  if (!elf_w (get_load_offset) (ei, segbase, mapoff, &ehdr, &load_offset)) {
     return false;
   }
 
@@ -570,8 +568,7 @@ HIDDEN bool elf_w (get_proc_name_in_image) (
   // the MiniDebugInfo.
   struct elf_image mdi;
   if (elf_w (extract_minidebuginfo) (ei, &mdi, &ehdr)) {
-    load_offset = elf_w (get_load_offset) (&mdi, segbase, mapoff, &ehdr);
-    if (load_offset == 0) {
+    if (!elf_w (get_load_offset) (&mdi, segbase, mapoff, &ehdr, &load_offset)) {
       return false;
     }
     if (elf_w (lookup_symbol) (as, ip, &mdi, load_offset, buf, buf_len, offp, &ehdr)) {
