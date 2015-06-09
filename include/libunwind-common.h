@@ -238,6 +238,7 @@ unw_map_t;
 
 /* These routines work both for local and remote unwinding.  */
 
+#define unw_local_access_addr_space_init UNW_OBJ(local_access_addr_space_init)
 #define unw_local_addr_space	UNW_OBJ(local_addr_space)
 #define unw_create_addr_space	UNW_OBJ(create_addr_space)
 #define unw_destroy_addr_space	UNW_OBJ(destroy_addr_space)
@@ -262,6 +263,7 @@ unw_map_t;
 #define unw_flush_cache		UNW_ARCH_OBJ(flush_cache)
 #define unw_strerror		UNW_ARCH_OBJ(strerror)
 
+extern void unw_local_access_addr_space_init (unw_addr_space_t);
 extern unw_addr_space_t unw_create_addr_space (unw_accessors_t *, int);
 extern void unw_destroy_addr_space (unw_addr_space_t);
 extern unw_accessors_t *unw_get_accessors (unw_addr_space_t);
