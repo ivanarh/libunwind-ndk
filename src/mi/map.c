@@ -41,7 +41,7 @@ unw_map_set (unw_addr_space_t as, unw_map_cursor_t *map_cursor)
 PROTECTED int
 unw_map_cursor_create (unw_map_cursor_t *map_cursor, pid_t pid)
 {
-  map_cursor->map_list = map_create_list (pid);
+  map_cursor->map_list = map_create_list (UNW_MAP_CREATE_REMOTE, pid);
 
   return map_cursor->map_list == NULL;
 }
