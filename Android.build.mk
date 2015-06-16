@@ -107,7 +107,7 @@ LOCAL_C_INCLUDES_arm64 := \
 LOCAL_SRC_FILES_arm64 := \
     $(subst src/arm64,src/aarch64,$(LOCAL_SRC_FILES_arm64))
 
-LOCAL_ADDRESS_SANITIZER := false
+LOCAL_SANITIZE := never
 
 ifeq ($(libunwind_build_type),target)
   include $(BUILD_$(libunwind_build_target))
