@@ -216,7 +216,7 @@ access_mem_unrestricted (unw_addr_space_t as, unw_word_t addr, unw_word_t *val,
   if (write)
     return -1;
 
-  *(unw_word_t *) (uintptr_t) addr = *val;
+  *val = *(unw_word_t *) (uintptr_t) addr;
   Debug (16, "mem[%llx] <- %llx\n", (long long) addr, (long long) *val);
   return 0;
 }
