@@ -5,12 +5,11 @@
 /* #undef CONFIG_BLOCK_SIGNALS */
 
 /* Enable Debug Frame */
-#if defined(__arm__)
-#define CONFIG_DEBUG_FRAME /**/
-#endif
+#define CONFIG_DEBUG_FRAME 1
 
 /* Support for Microsoft ABI extensions */
-/* #undef CONFIG_MSABI_SUPPORT */
+/* This is required to understand floating point registers on x86-64 */
+#define CONFIG_MSABI_SUPPORT 1
 
 /* Define to 1 if you want every memory access validated */
 #define CONSERVATIVE_CHECKS 1
