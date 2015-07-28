@@ -130,7 +130,6 @@ static bool dwarf_find_unwind_table_memory (
   GET_EHDR_FIELD(ei, &ehdr, e_phoff, false);
   GET_EHDR_FIELD(ei, &ehdr, e_phnum, false);
 
-  Elf_W(Phdr) phdr;
   Elf_W(Off) offset = ehdr.e_phoff;
   Elf_W(Off) txt_phdr_offset = 0;
   Elf_W(Addr) txt_pvaddr = 0;
@@ -218,7 +217,7 @@ static bool dwarf_find_unwind_table_memory (
 #if UNW_TARGET_ARM
   // Verify that the map contains enough space for the arm unwind data.
   if (arm_exidx_phdr_offset &&
-    arm_exidx_phdr_offset + sizeof(phdr) < ei->u.memory.map->end - ei->u.memory.map->start) {
+    arm_exidx_phdr_offset + sizeof(Elf_W(Phdr)) < ei->u.memory.map->end - ei->u.memory.map->start) {
     Elf_W(Phdr) phdr;
     GET_PHDR_FIELD(ei, arm_exidx_phdr_offset, &phdr, p_vaddr);
     GET_PHDR_FIELD(ei, arm_exidx_phdr_offset, &phdr, p_memsz);
