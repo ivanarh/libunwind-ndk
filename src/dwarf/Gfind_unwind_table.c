@@ -125,7 +125,7 @@ static bool get_eh_frame_info(
 
 static bool dwarf_find_unwind_table_memory (
     struct elf_dyn_info *edi, struct elf_image *ei, unw_addr_space_t as, char *path,
-    unw_word_t segbase, unw_word_t mapoff, unw_word_t ip) {
+    unw_word_t segbase, unw_word_t ip) {
   Elf_W(Ehdr) ehdr;
   GET_EHDR_FIELD(ei, &ehdr, e_phoff, false);
   GET_EHDR_FIELD(ei, &ehdr, e_phnum, false);
@@ -157,7 +157,13 @@ static bool dwarf_find_unwind_table_memory (
         }
 
         GET_PHDR_FIELD(ei, offset, &phdr, p_offset);
-        if (phdr.p_offset == mapoff) {
+        /* Always use zero as the map offset to match. The dlopen of a shared
+         * library from an APK will result in a non-zero offset so it won't
+         * match anything and cause unwinds to fail. There is no case where
+         * the ANDROID linker will create an executable map that has a non-zero
+         * map offset.
+         */
+        if (phdr.p_offset == 0) {
           txt_phdr_offset = offset;
           txt_pvaddr = phdr.p_vaddr;
         }
@@ -238,7 +244,7 @@ static bool dwarf_find_unwind_table_memory (
 int
 dwarf_find_unwind_table (struct elf_dyn_info *edi, struct elf_image *ei,
 			 unw_addr_space_t as, char *path,
-			 unw_word_t segbase, unw_word_t mapoff, unw_word_t ip)
+			 unw_word_t segbase, unw_word_t ip)
 {
   Elf_W(Phdr) *phdr, *ptxt = NULL, *peh_hdr = NULL, *pdyn = NULL;
   unw_word_t addr, eh_frame_start, fde_count, load_base;
@@ -263,7 +269,7 @@ dwarf_find_unwind_table (struct elf_dyn_info *edi, struct elf_image *ei,
     return -UNW_ENOINFO;
 
   if (!ei->mapped) {
-    if (dwarf_find_unwind_table_memory (edi, ei, as, path, segbase, mapoff, ip)) {
+    if (dwarf_find_unwind_table_memory (edi, ei, as, path, segbase, ip)) {
       return 1;
     }
     return -UNW_ENOINFO;
@@ -285,7 +291,13 @@ dwarf_find_unwind_table (struct elf_dyn_info *edi, struct elf_image *ei,
 	  if (phdr[i].p_vaddr + phdr[i].p_memsz > end_ip)
 	    end_ip = phdr[i].p_vaddr + phdr[i].p_memsz;
 
-	  if (phdr[i].p_offset == mapoff)
+	  /* Always use zero as the map offset to match. The dlopen of a shared
+	   * library from an APK will result in a non-zero offset so it won't
+	   * match anything and cause unwinds to fail. There is no case where
+	   * the ANDROID linker will create an executable map that has a non-zero
+	   * map offset.
+	   */
+	  if (phdr[i].p_offset == 0)
 	    ptxt = phdr + i;
 
 #if 0

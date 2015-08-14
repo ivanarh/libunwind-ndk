@@ -86,7 +86,7 @@ map_create_list (int map_create_type, pid_t pid)
               && elf_map_image (&ei, cur_map->path))
             {
               unw_word_t load_base;
-              if (elf_w (get_load_base) (&ei, offset, &load_base))
+              if (elf_w (get_load_base) (&ei, &load_base))
                 cur_map->load_base = load_base;
               munmap (ei.u.mapped.image, ei.u.mapped.size);
             }
@@ -127,7 +127,7 @@ map_create_list (int map_create_type, pid_t pid)
                   ei.u.memory.as_arg = as_arg;
                   ei.valid = elf_w (valid_object_memory) (&ei);
                   unw_word_t load_base;
-                  if (ei.valid && elf_w (get_load_base) (&ei, cur_map->offset, &load_base))
+                  if (ei.valid && elf_w (get_load_base) (&ei, &load_base))
                     cur_map->load_base = load_base;
                 }
             }
