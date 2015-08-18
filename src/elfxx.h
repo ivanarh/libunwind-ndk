@@ -76,9 +76,9 @@ extern bool elf_w (get_proc_name) (
 
 extern bool elf_w (get_proc_name_in_image) (
     unw_addr_space_t as, struct elf_image* ei, unsigned long segbase,
-    unsigned long mapoff, unw_word_t ip, char* buf, size_t buf_len, unw_word_t* offp);
+    unw_word_t ip, char* buf, size_t buf_len, unw_word_t* offp);
 
-extern bool elf_w (get_load_base) (struct elf_image* ei, unw_word_t mapoff, unw_word_t* load_base);
+extern bool elf_w (get_load_base) (struct elf_image* ei, unw_word_t* load_base);
 
 extern size_t elf_w (memory_read) (
     struct elf_image* ei, unw_word_t addr, uint8_t* buffer, size_t bytes, bool string_read);
@@ -166,7 +166,7 @@ static inline bool elf_map_cached_image (
       }
     }
     unw_word_t load_base;
-    if (map->ei.valid && elf_w (get_load_base) (&map->ei, map->offset, &load_base)) {
+    if (map->ei.valid && elf_w (get_load_base) (&map->ei, &load_base)) {
       map->load_base = load_base;
     }
   }
