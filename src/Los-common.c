@@ -186,7 +186,16 @@ local_get_elf_image (unw_addr_space_t as, struct elf_image *ei, unw_word_t ip,
     {
       *ei = map->ei;
       *segbase = map->start;
-      *mapoff = map->offset;
+      if (ei->mapped)
+        *mapoff = map->offset;
+      else
+        /* Always use zero as the map offset for in memory maps. The
+         * dlopen of a shared library from an APK will result in a
+         * non-zero offset so it won't match the elf data and cause
+         * unwinds to fail. Currently, only in memory unwinds of an APK
+         * are possible, so only modify this path.
+         */
+        *mapoff = 0;
       if (path != NULL)
         {
           if (map->path)
