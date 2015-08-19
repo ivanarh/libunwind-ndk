@@ -164,7 +164,7 @@ map_local_is_writable (unw_word_t addr)
 
 PROTECTED int
 local_get_elf_image (unw_addr_space_t as, struct elf_image *ei, unw_word_t ip,
-                     unsigned long *segbase, char **path, void *as_arg)
+                     unsigned long *segbase, unsigned long *mapoff, char **path, void *as_arg)
 {
   struct map_info *map;
   intrmask_t saved_mask;
@@ -186,6 +186,7 @@ local_get_elf_image (unw_addr_space_t as, struct elf_image *ei, unw_word_t ip,
     {
       *ei = map->ei;
       *segbase = map->start;
+      *mapoff = map->offset;
       if (path != NULL)
         {
           if (map->path)

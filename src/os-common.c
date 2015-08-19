@@ -27,17 +27,19 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 #include "map_info.h"
 
 extern int local_get_elf_image (unw_addr_space_t as, struct elf_image *,
-                                unw_word_t, unsigned long *, char **, void *);
+                                unw_word_t, unsigned long *, unsigned long *,
+                                char **, void *);
 
 PROTECTED int
 tdep_get_elf_image (unw_addr_space_t as, struct elf_image *ei,
-                    pid_t pid, unw_word_t ip, unsigned long *segbase,
-                    char **path, void *as_arg)
+                    pid_t pid, unw_word_t ip,
+                    unsigned long *segbase, unsigned long *mapoff, char **path,
+                    void *as_arg)
 {
   struct map_info *map;
 
   if (pid == getpid())
-    return local_get_elf_image (as, ei, ip, segbase, path, as_arg);
+    return local_get_elf_image (as, ei, ip, segbase, mapoff, path, as_arg);
 
   map = map_find_from_addr (as->map_list, ip);
   if (!map)
@@ -48,6 +50,7 @@ tdep_get_elf_image (unw_addr_space_t as, struct elf_image *ei,
 
   *ei = map->ei;
   *segbase = map->start;
+  *mapoff = map->offset;
   if (path != NULL)
     {
       *path = strdup (map->path);

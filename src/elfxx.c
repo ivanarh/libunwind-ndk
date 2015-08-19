@@ -245,7 +245,8 @@ static bool elf_w (lookup_symbol_memory) (
 }
 
 static bool elf_w (get_load_offset_memory) (
-    struct elf_image* ei, unsigned long segbase, Elf_W(Ehdr)* ehdr, Elf_W(Addr)* load_offset) {
+    struct elf_image* ei, unsigned long segbase, unsigned long mapoff,
+    Elf_W(Ehdr)* ehdr, Elf_W(Addr)* load_offset) {
   GET_EHDR_FIELD(ei, ehdr, e_phoff, true);
   GET_EHDR_FIELD(ei, ehdr, e_phnum, true);
 
@@ -256,13 +257,7 @@ static bool elf_w (get_load_offset_memory) (
     GET_PHDR_FIELD(ei, offset, &phdr, p_type);
     if (phdr.p_type == PT_LOAD) {
       GET_PHDR_FIELD(ei, offset, &phdr, p_offset);
-      /* Always use zero as the map offset to match. The dlopen of a shared
-       * library from an APK will result in a non-zero offset so it won't
-       * match anything and cause unwinds to fail. There is no case where
-       * the ANDROID linker will create an executable map that has a non-zero
-       * map offset.
-       */
-      if (phdr.p_offset == 0) {
+      if (phdr.p_offset == mapoff) {
         GET_PHDR_FIELD(ei, offset, &phdr, p_vaddr);
         *load_offset = segbase - phdr.p_vaddr;
         return true;
@@ -392,19 +387,13 @@ static bool elf_w (lookup_symbol_mapped) (
 }
 
 static bool elf_w (get_load_offset_mapped) (
-    struct elf_image *ei, unsigned long segbase, Elf_W(Addr)* load_offset) {
+    struct elf_image *ei, unsigned long segbase, unsigned long mapoff, Elf_W(Addr)* load_offset) {
   Elf_W(Ehdr) *ehdr = ei->u.mapped.image;
   Elf_W(Phdr) *phdr = (Elf_W(Phdr) *) ((char *) ei->u.mapped.image + ehdr->e_phoff);
 
   int i;
   for (i = 0; i < ehdr->e_phnum; ++i) {
-    /* Always use zero as the map offset to match. The dlopen of a shared
-     * library from an APK will result in a non-zero offset so it won't
-     * match anything and cause unwinds to fail. There is no case where
-     * the ANDROID linker will create an executable map that has a non-zero
-     * map offset.
-     */
-    if (phdr[i].p_type == PT_LOAD && phdr[i].p_offset == 0) {
+    if (phdr[i].p_type == PT_LOAD && phdr[i].p_offset == mapoff) {
       *load_offset = segbase - phdr[i].p_vaddr;
       return true;
     }
@@ -436,11 +425,12 @@ static inline bool elf_w (lookup_symbol) (
 }
 
 static bool elf_w (get_load_offset) (
-    struct elf_image* ei, unsigned long segbase, Elf_W(Ehdr)* ehdr, Elf_W(Addr)* load_offset) {
+    struct elf_image* ei, unsigned long segbase, unsigned long mapoff,
+    Elf_W(Ehdr)* ehdr, Elf_W(Addr)* load_offset) {
   if (ei->mapped) {
-    return elf_w (get_load_offset_mapped) (ei, segbase, load_offset);
+    return elf_w (get_load_offset_mapped) (ei, segbase, mapoff, load_offset);
   } else {
-    return elf_w (get_load_offset_memory) (ei, segbase, ehdr, load_offset);
+    return elf_w (get_load_offset_memory) (ei, segbase, mapoff, ehdr, load_offset);
   }
 }
 
@@ -561,12 +551,12 @@ static bool elf_w (extract_minidebuginfo) (struct elf_image* ei, struct elf_imag
 // Find the ELF image that contains IP and return the procedure name from
 // the symbol table that matches the IP.
 HIDDEN bool elf_w (get_proc_name_in_image) (
-    unw_addr_space_t as, struct elf_image* ei, unsigned long segbase,
+    unw_addr_space_t as, struct elf_image* ei, unsigned long segbase, unsigned long mapoff,
     unw_word_t ip, char* buf, size_t buf_len, unw_word_t* offp) {
   Elf_W(Ehdr) ehdr;
   memset(&ehdr, 0, sizeof(ehdr));
   Elf_W(Addr) load_offset;
-  if (!elf_w (get_load_offset) (ei, segbase, &ehdr, &load_offset)) {
+  if (!elf_w (get_load_offset) (ei, segbase, mapoff, &ehdr, &load_offset)) {
     return false;
   }
 
@@ -578,7 +568,7 @@ HIDDEN bool elf_w (get_proc_name_in_image) (
   // the MiniDebugInfo.
   struct elf_image mdi;
   if (elf_w (extract_minidebuginfo) (ei, &mdi, &ehdr)) {
-    if (!elf_w (get_load_offset) (&mdi, segbase, &ehdr, &load_offset)) {
+    if (!elf_w (get_load_offset) (&mdi, segbase, mapoff, &ehdr, &load_offset)) {
       return false;
     }
     if (elf_w (lookup_symbol) (as, ip, &mdi, load_offset, buf, buf_len, offp, &ehdr)) {
@@ -593,17 +583,17 @@ HIDDEN bool elf_w (get_proc_name_in_image) (
 HIDDEN bool elf_w (get_proc_name) (
     unw_addr_space_t as, pid_t pid, unw_word_t ip, char* buf, size_t buf_len,
     unw_word_t* offp, void* as_arg) {
-  unsigned long segbase;
+  unsigned long segbase, mapoff;
   struct elf_image ei;
 
-  if (tdep_get_elf_image(as, &ei, pid, ip, &segbase, NULL, as_arg) < 0) {
+  if (tdep_get_elf_image(as, &ei, pid, ip, &segbase, &mapoff, NULL, as_arg) < 0) {
     return false;
   }
 
-  return elf_w (get_proc_name_in_image) (as, &ei, segbase, ip, buf, buf_len, offp);
+  return elf_w (get_proc_name_in_image) (as, &ei, segbase, mapoff, ip, buf, buf_len, offp);
 }
 
-HIDDEN bool elf_w (get_load_base) (struct elf_image* ei, unw_word_t* load_base) {
+HIDDEN bool elf_w (get_load_base) (struct elf_image* ei, unw_word_t mapoff, unw_word_t* load_base) {
   if (!ei->valid) {
     return false;
   }
@@ -613,13 +603,7 @@ HIDDEN bool elf_w (get_load_base) (struct elf_image* ei, unw_word_t* load_base) 
     Elf_W(Phdr)* phdr = (Elf_W(Phdr)*) ((char*) ei->u.mapped.image + ehdr->e_phoff);
     int i;
     for (i = 0; i < ehdr->e_phnum; ++i) {
-      /* Always use zero as the map offset to match. The dlopen of a shared
-       * library from an APK will result in a non-zero offset so it won't
-       * match anything and cause unwinds to fail. There is no case where
-       * the ANDROID linker will create an executable map that has a non-zero
-       * map offset.
-       */
-      if (phdr[i].p_type == PT_LOAD && phdr[i].p_offset == 0) {
+      if (phdr[i].p_type == PT_LOAD && phdr[i].p_offset == mapoff) {
         *load_base = phdr[i].p_vaddr;
         return true;
       }
@@ -635,13 +619,7 @@ HIDDEN bool elf_w (get_load_base) (struct elf_image* ei, unw_word_t* load_base) 
       Elf_W(Phdr) phdr;
       GET_PHDR_FIELD(ei, offset, &phdr, p_type);
       GET_PHDR_FIELD(ei, offset, &phdr, p_offset);
-      /* Always use zero as the map offset to match. The dlopen of a shared
-       * library from an APK will result in a non-zero offset so it won't
-       * match anything and cause unwinds to fail. There is no case where
-       * the ANDROID linker will create an executable map that has a non-zero
-       * map offset.
-       */
-      if (phdr.p_type == PT_LOAD && phdr.p_offset == 0) {
+      if (phdr.p_type == PT_LOAD && phdr.p_offset == mapoff) {
         GET_PHDR_FIELD(ei, offset, &phdr, p_vaddr);
         *load_base = phdr.p_vaddr;
         return true;
