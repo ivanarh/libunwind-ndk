@@ -411,7 +411,8 @@ extern int dwarf_search_unwind_table (unw_addr_space_t as,
 /* ANDROID support update. */
 extern int dwarf_find_unwind_table (struct elf_dyn_info *edi, struct elf_image *ei,
 				    unw_addr_space_t as, char *path,
-				    unw_word_t segbase, unw_word_t ip);
+				    unw_word_t segbase, unw_word_t mapoff,
+				    unw_word_t ip);
 /* End of ANDROID update. */
 extern void dwarf_put_unwind_info (unw_addr_space_t as,
 				   unw_proc_info_t *pi, void *arg);
