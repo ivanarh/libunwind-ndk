@@ -120,39 +120,45 @@ load_debug_frame (const char *file, char **buf, size_t *bufsize, int is_local)
 
   fseek (f, ehdr.e_shoff, SEEK_SET);
   sec_hdrs = calloc (ehdr.e_shnum, sizeof (Elf_W (Shdr)));
-  if (fread (sec_hdrs, sizeof (Elf_W (Shdr)), ehdr.e_shnum, f) != ehdr.e_shnum)
+  if (sec_hdrs == NULL || fread (sec_hdrs, sizeof (Elf_W (Shdr)), ehdr.e_shnum, f) != ehdr.e_shnum)
     goto file_error;
 
   Debug (4, "loading string table of size %ld\n",
 	   (long) sec_hdrs[shstrndx].sh_size);
-  stringtab = malloc (sec_hdrs[shstrndx].sh_size);
+  size_t sec_size = sec_hdrs[shstrndx].sh_size;
+  stringtab = malloc (sec_size);
   fseek (f, sec_hdrs[shstrndx].sh_offset, SEEK_SET);
-  if (fread (stringtab, 1, sec_hdrs[shstrndx].sh_size, f) != sec_hdrs[shstrndx].sh_size)
+  if (stringtab == NULL || fread (stringtab, 1, sec_size, f) != sec_size)
     goto file_error;
   
   for (i = 1; i < ehdr.e_shnum && *buf == NULL; i++)
     {
-      char *secname = &stringtab[sec_hdrs[i].sh_name];
+      size_t sec_position = sec_hdrs[i].sh_name;
+      if (sec_position >= sec_size)
+        continue;
+      char *secname = &stringtab[sec_position];
 
-      if (strcmp (secname, ".debug_frame") == 0)
+      if (sec_position + sizeof(".debug_frame") <= sec_size
+          && strcmp (secname, ".debug_frame") == 0)
         {
 	  *bufsize = sec_hdrs[i].sh_size;
 	  *buf = malloc (*bufsize);
 
 	  fseek (f, sec_hdrs[i].sh_offset, SEEK_SET);
-	  if (fread (*buf, 1, *bufsize, f) != *bufsize)
+	  if (*buf == NULL || fread (*buf, 1, *bufsize, f) != *bufsize)
 	    goto file_error;
 
 	  Debug (4, "read %zd bytes of .debug_frame from offset %ld\n",
 		 *bufsize, (long) sec_hdrs[i].sh_offset);
 	}
-      else if (strcmp (secname, ".gnu_debuglink") == 0)
+      else if (sec_position + sizeof(".gnu_debuglink") <= sec_size
+          && strcmp (secname, ".gnu_debuglink") == 0)
 	{
 	  linksize = sec_hdrs[i].sh_size;
 	  linkbuf = malloc (linksize);
 
 	  fseek (f, sec_hdrs[i].sh_offset, SEEK_SET);
-	  if (fread (linkbuf, 1, linksize, f) != linksize)
+	  if (linkbuf == NULL || fread (linkbuf, 1, linksize, f) != linksize)
 	    goto file_error;
 
 	  Debug (4, "read %zd bytes of .gnu_debuglink from offset %ld\n",
@@ -182,6 +188,8 @@ load_debug_frame (const char *file, char **buf, size_t *bufsize, int is_local)
       basedir = malloc (strlen (file) + 1);
       newname = malloc (strlen (linkbuf) + strlen (debugdir)
 			+ strlen (file) + 9);
+      if (basedir == NULL || newname == NULL)
+        goto file_error;
 
       p = strrchr (file, '/');
       if (p != NULL)
