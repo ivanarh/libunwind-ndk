@@ -66,6 +66,9 @@ move_cached_elf_data (struct map_info *old_list, struct map_info *new_list)
               /* No need to do any lock, the entire local_map_list is locked
                  at this point. */
               new_list->ei = old_list->ei;
+              /* Adjust the map pointer in the elf image data if necessary. */
+              if (!new_list->ei.mapped)
+                new_list->ei.u.memory.map = new_list;
               /* If it was mapped before, make sure to mark it unmapped now. */
               old_list->ei.mapped = false;
               /* Don't bother breaking out of the loop, the next while check
