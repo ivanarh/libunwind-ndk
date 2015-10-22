@@ -16,6 +16,11 @@
 
 include $(CLEAR_VARS)
 
+ifeq ($(TARGET_ARCH),$(filter $(TARGET_ARCH),mips mips64 x86_64))
+# Many init services failed to start with clang for x86_64, mips, mips64
+LOCAL_CLANG := false
+endif
+
 LOCAL_MODULE := $(libunwind_module)
 LOCAL_MODULE_TAGS := $(libunwind_module_tag)
 ifeq ($(libunwind_build_type),host)
