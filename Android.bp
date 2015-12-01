@@ -376,7 +376,7 @@ cc_library {
             ],
         },
         darwin: {
-            disabled: true,
+            enabled: false,
         },
     },
 
@@ -431,7 +431,7 @@ cc_library_static {
             cflags: libunwind_common_cflags_target,
         },
         darwin: {
-            disabled: true,
+            enabled: false,
         },
     },
 
