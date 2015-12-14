@@ -24,8 +24,9 @@ endif
 LOCAL_MODULE := $(libunwind_module)
 LOCAL_MODULE_TAGS := $(libunwind_module_tag)
 ifeq ($(libunwind_build_type),host)
-# Always make host multilib
+# Always make host multilib, and always use clang.
 LOCAL_MULTILIB := both
+LOCAL_CLANG := true
 else
 LOCAL_MULTILIB := $($(libunwind_module)_multilib)
 endif
