@@ -112,6 +112,10 @@ load_debug_frame (const char *file, char **buf, size_t *bufsize, int is_local)
   
   if (fread (&ehdr, sizeof (Elf_W (Ehdr)), 1, f) != 1)
     goto file_error;
+
+  /* Verify this is actually an elf file. */
+  if (memcmp(ehdr.e_ident, ELFMAG, SELFMAG) != 0)
+    goto file_error;
   
   shstrndx = ehdr.e_shstrndx;
   
@@ -120,7 +124,8 @@ load_debug_frame (const char *file, char **buf, size_t *bufsize, int is_local)
 
   fseek (f, ehdr.e_shoff, SEEK_SET);
   sec_hdrs = calloc (ehdr.e_shnum, sizeof (Elf_W (Shdr)));
-  if (sec_hdrs == NULL || fread (sec_hdrs, sizeof (Elf_W (Shdr)), ehdr.e_shnum, f) != ehdr.e_shnum)
+  if (sec_hdrs == NULL || fread (sec_hdrs, sizeof (Elf_W (Shdr)), ehdr.e_shnum, f) != ehdr.e_shnum
+      || shstrndx >= ehdr.e_shnum)
     goto file_error;
 
   Debug (4, "loading string table of size %ld\n",
