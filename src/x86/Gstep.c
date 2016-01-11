@@ -130,7 +130,8 @@ unw_step (unw_cursor_t *cursor)
       c->dwarf.frame++;
     }
   /* End of ANDROID update. */
-  ret = (c->dwarf.ip == 0) ? 0 : 1;
-  Debug (2, "returning %d\n", ret);
-  return ret;
+  if (unlikely (ret <= 0))
+    return 0;
+
+  return (c->dwarf.ip == 0) ? 0 : 1;
 }
