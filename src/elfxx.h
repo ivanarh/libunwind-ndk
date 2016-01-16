@@ -150,6 +150,18 @@ static inline bool elf_map_cached_image (
     unw_addr_space_t as, void* as_arg, struct map_info* map, unw_word_t ip) {
   intrmask_t saved_mask;
 
+  // Don't even try and cache this unless the map is readable and executable.
+  if ((map->flags & (PROT_READ | PROT_EXEC)) != (PROT_READ | PROT_EXEC)) {
+    return false;
+  }
+
+  // Do not try and cache the map if it's a file from /dev/ that is not
+  // /dev/ashmem/.
+  if (map->path != NULL && strncmp ("/dev/", map->path, 5) == 0
+      && strncmp ("ashmem/", map->path + 5, 7) != 0) {
+    return false;
+  }
+
   // Lock while loading the cached elf image.
   lock_acquire (&map->ei_lock, saved_mask);
   if (!map->ei.load_attempted) {
