@@ -226,6 +226,8 @@ libunwind_src_files_arm   += src/elf32.c
 libunwind_src_files_mips  += src/elf32.c
 libunwind_src_files_x86   += src/elf32.c
 
+libunwind_static_libraries := liblzma
+
 libunwind_shared_libraries_target := \
     libdl \
 
