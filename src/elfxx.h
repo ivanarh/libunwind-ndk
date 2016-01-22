@@ -83,6 +83,12 @@ extern bool elf_w (get_load_base) (struct elf_image* ei, unw_word_t mapoff, unw_
 extern size_t elf_w (memory_read) (
     struct elf_image* ei, unw_word_t addr, uint8_t* buffer, size_t bytes, bool string_read);
 
+extern bool elf_w (xz_decompress) (uint8_t* src, size_t src_size,
+                                   uint8_t** dst, size_t* dst_size);
+
+extern bool elf_w (find_section_mapped) (struct elf_image *ei, const char* name,
+                                         uint8_t** section, size_t* size, Elf_W(Addr)* vaddr);
+
 static inline bool elf_w (valid_object_mapped) (struct elf_image* ei) {
   if (ei->u.mapped.size <= EI_VERSION) {
     return false;

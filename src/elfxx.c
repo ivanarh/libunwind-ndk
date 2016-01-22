@@ -29,8 +29,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 #include <stdio.h>
 #include <sys/param.h>
 
-#ifdef HAVE_LZMA
-#include <lzma.h>
+#if HAVE_LZMA
+#include <7zCrc.h>
+#include <Xz.h>
+#include <XzCrc64.h>
 #endif /* HAVE_LZMA */
 
 // --------------------------------------------------------------------------
@@ -401,6 +403,19 @@ static bool elf_w (get_load_offset_mapped) (
   return false;
 }
 
+static Elf_W(Addr) elf_w (get_min_vaddr_mapped) (struct elf_image *ei) {
+  Elf_W(Ehdr) *ehdr = ei->u.mapped.image;
+  Elf_W(Phdr) *phdr = (Elf_W(Phdr) *) ((char *) ei->u.mapped.image + ehdr->e_phoff);
+  Elf_W(Addr) min_vaddr = ~0u;
+  int i;
+  for (i = 0; i < ehdr->e_phnum; ++i) {
+    if (phdr[i].p_type == PT_LOAD && phdr[i].p_vaddr < min_vaddr) {
+      min_vaddr = phdr[i].p_vaddr;
+    }
+  }
+  return min_vaddr;
+}
+
 // --------------------------------------------------------------------------
 
 static inline bool elf_w (lookup_symbol) (
@@ -434,50 +449,75 @@ static bool elf_w (get_load_offset) (
   }
 }
 
-#if HAVE_LZMA
-static size_t xz_uncompressed_size (uint8_t* compressed, size_t length) {
-  uint64_t memlimit = UINT64_MAX;
-  size_t ret = 0, pos = 0;
-  lzma_stream_flags options;
-  lzma_index *index;
-
-  if (length < LZMA_STREAM_HEADER_SIZE) {
-    return 0;
-  }
-
-  uint8_t *footer = compressed + length - LZMA_STREAM_HEADER_SIZE;
-  if (lzma_stream_footer_decode (&options, footer) != LZMA_OK) {
-    return 0;
-  }
-
-  if (length < LZMA_STREAM_HEADER_SIZE + options.backward_size) {
-    return 0;
-  }
-
-  uint8_t* indexdata = footer - options.backward_size;
-  if (lzma_index_buffer_decode (&index, &memlimit, NULL, indexdata,
-                                &pos, options.backward_size) != LZMA_OK) {
-    return 0;
-  }
-
-  if (lzma_index_size (index) == options.backward_size) {
-    ret = lzma_index_uncompressed_size (index);
-  }
-
-  lzma_index_end (index, NULL);
-  return ret;
+/* ANDROID support update. */
+static void* xz_alloc(void* p, size_t size) {
+  return malloc(size);
 }
 
-static bool elf_w (extract_minidebuginfo) (struct elf_image* ei, struct elf_image* mdi, Elf_W(Ehdr)* ehdr) {
-  Elf_W(Ehdr)* ehdr = ei->image;
-  Elf_W(Shdr)* shdr;
+static void xz_free(void* p, void* address) {
+  free(address);
+}
+
+HIDDEN bool
+elf_w (xz_decompress) (uint8_t* src, size_t src_size,
+                       uint8_t** dst, size_t* dst_size) {
+#if HAVE_LZMA
+  size_t src_offset = 0;
+  size_t dst_offset = 0;
+  size_t src_remaining;
+  size_t dst_remaining;
+  ISzAlloc alloc;
+  CXzUnpacker state;
+  ECoderStatus status;
+  alloc.Alloc = xz_alloc;
+  alloc.Free = xz_free;
+  XzUnpacker_Construct(&state, &alloc);
+  CrcGenerateTable();
+  Crc64GenerateTable();
+  *dst_size = 2 * src_size;
+  *dst = NULL;
+  do {
+    *dst_size *= 2;
+    *dst = realloc(*dst, *dst_size);
+    src_remaining = src_size - src_offset;
+    dst_remaining = *dst_size - dst_offset;
+    int res = XzUnpacker_Code(&state,
+                              *dst + dst_offset, &dst_remaining,
+                              src + src_offset, &src_remaining,
+                              CODER_FINISH_ANY, &status);
+    if (res != SZ_OK) {
+      Debug (1, "LZMA decompression failed with error %d\n", res);
+      free(*dst);
+      XzUnpacker_Free(&state);
+      return false;
+    }
+    src_offset += src_remaining;
+    dst_offset += dst_remaining;
+  } while (status == CODER_STATUS_NOT_FINISHED);
+  XzUnpacker_Free(&state);
+  if (!XzUnpacker_IsStreamWasFinished(&state)) {
+    Debug (1, "LZMA decompression failed due to incomplete stream.\n");
+    free(*dst);
+    return false;
+  }
+  *dst_size = dst_offset;
+  *dst = realloc(*dst, *dst_size);
+  return true;
+#else
+  Debug (1, "Decompression failed - compiled without LZMA support.\n",
+  return false;
+#endif // HAVE_LZMA
+}
+
+HIDDEN bool
+elf_w (find_section_mapped) (struct elf_image *ei, const char* name,
+                             uint8_t** section, size_t* size, Elf_W(Addr)* vaddr) {
+  Elf_W (Ehdr) *ehdr = ei->u.mapped.image;
+  Elf_W (Shdr) *shdr;
   char *strtab;
   int i;
-  uint8_t *compressed = NULL;
-  uint64_t memlimit = UINT64_MAX; /* no memory limit */
-  size_t compressed_len, uncompressed_len;
 
-  if (!ei->valid) {
+  if (!ei->valid || !ei->mapped) {
     return false;
   }
 
@@ -492,61 +532,39 @@ static bool elf_w (extract_minidebuginfo) (struct elf_image* ei, struct elf_imag
   }
 
   for (i = 0; i < ehdr->e_shnum; ++i) {
-    if (strcmp (strtab + shdr->sh_name, ".gnu_debugdata") == 0) {
-      if (shdr->sh_offset + shdr->sh_size > ei->size) {
-        Debug (1, ".gnu_debugdata outside image? (0x%lu > 0x%lu)\n",
-               (unsigned long) shdr->sh_offset + shdr->sh_size,
-               (unsigned long) ei->size);
-        return false;
+    if (strcmp (strtab + shdr->sh_name, name) == 0) {
+      if (section != NULL && size != NULL) {
+        if (shdr->sh_offset + shdr->sh_size > ei->u.mapped.size) {
+          Debug (1, "section %s outside image? (0x%lu > 0x%lu)\n", name,
+                 (unsigned long) (shdr->sh_offset + shdr->sh_size),
+                 (unsigned long) ei->u.mapped.size);
+          return false;
+        }
+        *section = ((uint8_t *) ei->u.mapped.image) + shdr->sh_offset;
+        *size = shdr->sh_size;
       }
-
-      Debug (16, "found .gnu_debugdata at 0x%lx\n",
-             (unsigned long) shdr->sh_offset);
-             compressed = ((uint8_t *) ei->image) + shdr->sh_offset;
-             compressed_len = shdr->sh_size;
-      break;
+      if (vaddr != NULL) {
+        *vaddr = shdr->sh_addr;
+      }
+      return true;
     }
-
-    shdr = (Elf_W(Shdr) *) (((char *) shdr) + ehdr->e_shentsize);
+    shdr = (Elf_W (Shdr) *) (((char *) shdr) + ehdr->e_shentsize);
   }
-
-  /* not found */
-  if (!compressed) {
-    return false;
-  }
-
-  uncompressed_len = xz_uncompressed_size (compressed, compressed_len);
-  if (uncompressed_len == 0) {
-    Debug (1, "invalid .gnu_debugdata contents\n");
-    return false;
-  }
-
-  mdi->size = uncompressed_len;
-  mdi->image = mmap (NULL, uncompressed_len, PROT_READ|PROT_WRITE,
-                     MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
-
-  if (mdi->image == MAP_FAILED) {
-    return false;
-  }
-
-  size_t in_pos = 0, out_pos = 0;
-  lzma_ret lret;
-  lret = lzma_stream_buffer_decode (&memlimit, 0, NULL,
-                                    compressed, &in_pos, compressed_len,
-                                    mdi->image, &out_pos, mdi->size);
-  if (lret != LZMA_OK) {
-    Debug (1, "LZMA decompression failed: %d\n", lret);
-    munmap (mdi->image, mdi->size);
-    return false;
-  }
-
-  return true;
-}
-#else
-static bool elf_w (extract_minidebuginfo) (struct elf_image* ei, struct elf_image* mdi, Elf_W(Ehdr)* ehdr) {
   return false;
 }
-#endif /* !HAVE_LZMA */
+
+static bool
+elf_w (extract_minidebuginfo_mapped) (struct elf_image *ei, struct elf_image *mdi)
+{
+  uint8_t *compressed = NULL;
+  size_t compressed_len;
+  if (elf_w (find_section_mapped) (ei, ".gnu_debugdata", &compressed, &compressed_len, NULL)) {
+    return elf_w (xz_decompress) (compressed, compressed_len,
+                                  (uint8_t**)&mdi->u.mapped.image, &mdi->u.mapped.size);
+  }
+  return false;
+}
+/* ANDROID support update. */
 
 // Find the ELF image that contains IP and return the procedure name from
 // the symbol table that matches the IP.
@@ -567,15 +585,17 @@ HIDDEN bool elf_w (get_proc_name_in_image) (
   // If the ELF image doesn't contain a match, look up the symbol in
   // the MiniDebugInfo.
   struct elf_image mdi;
-  if (elf_w (extract_minidebuginfo) (ei, &mdi, &ehdr)) {
-    if (!elf_w (get_load_offset) (&mdi, segbase, mapoff, &ehdr, &load_offset)) {
-      return false;
-    }
-    if (elf_w (lookup_symbol) (as, ip, &mdi, load_offset, buf, buf_len, offp, &ehdr)) {
-      munmap (mdi.u.mapped.image, mdi.u.mapped.size);
-      return true;
-    }
-    return false;
+  if (ei->mapped && elf_w (extract_minidebuginfo_mapped) (ei, &mdi)) {
+    mdi.valid = elf_w (valid_object_mapped) (&mdi);
+    mdi.mapped = true;
+    // The ELF file might have been relocated after the debug
+    // information has been compresses and embedded.
+    Elf_W(Addr) ei_base_address = elf_w (get_min_vaddr_mapped) (ei);
+    Elf_W(Addr) mdi_base_address = elf_w (get_min_vaddr_mapped) (&mdi);
+    load_offset += ei_base_address - mdi_base_address;
+    bool ret_val = elf_w (lookup_symbol) (as, ip, &mdi, load_offset, buf, buf_len, offp, &ehdr);
+    free(mdi.u.mapped.image);
+    return ret_val;
   }
   return false;
 }
