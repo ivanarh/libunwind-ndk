@@ -590,9 +590,11 @@ HIDDEN bool elf_w (get_proc_name_in_image) (
     mdi.mapped = true;
     // The ELF file might have been relocated after the debug
     // information has been compresses and embedded.
-    Elf_W(Addr) ei_base_address = elf_w (get_min_vaddr_mapped) (ei);
-    Elf_W(Addr) mdi_base_address = elf_w (get_min_vaddr_mapped) (&mdi);
-    load_offset += ei_base_address - mdi_base_address;
+    ElfW(Addr) ei_text_address, mdi_text_address;
+    if (elf_w (find_section_mapped) (ei, ".text", NULL, NULL, &ei_text_address) &&
+        elf_w (find_section_mapped) (&mdi, ".text", NULL, NULL, &mdi_text_address)) {
+      load_offset += ei_text_address - mdi_text_address;
+    }
     bool ret_val = elf_w (lookup_symbol) (as, ip, &mdi, load_offset, buf, buf_len, offp, &ehdr);
     free(mdi.u.mapped.image);
     return ret_val;
