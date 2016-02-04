@@ -71,6 +71,9 @@ move_cached_elf_data (struct map_info *old_list, struct map_info *new_list)
                 new_list->ei.u.memory.map = new_list;
               /* If it was mapped before, make sure to mark it unmapped now. */
               old_list->ei.mapped = false;
+              /* Clear the old mini debug info so we do not try to free it twice */
+              old_list->ei.mini_debug_info_data = NULL;
+              old_list->ei.mini_debug_info_size = 0;
               /* Don't bother breaking out of the loop, the next while check
                  is guaranteed to fail, causing us to break out of the loop
                  after advancing to the next map element. */
@@ -173,7 +176,7 @@ map_local_is_writable (unw_word_t addr, size_t write_bytes)
 }
 
 PROTECTED int
-local_get_elf_image (unw_addr_space_t as, struct elf_image *ei, unw_word_t ip,
+local_get_elf_image (unw_addr_space_t as, struct elf_image **ei, unw_word_t ip,
                      unsigned long *segbase, unsigned long *mapoff, char **path, void *as_arg)
 {
   struct map_info *map;
@@ -194,9 +197,9 @@ local_get_elf_image (unw_addr_space_t as, struct elf_image *ei, unw_word_t ip,
 
   if (map && elf_map_cached_image (as, as_arg, map, ip))
     {
-      *ei = map->ei;
+      *ei = &map->ei;
       *segbase = map->start;
-      if (ei->mapped)
+      if ((*ei)->mapped)
         *mapoff = map->offset;
       else
         /* Always use zero as the map offset for in memory maps. The
