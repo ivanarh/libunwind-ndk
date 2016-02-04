@@ -479,6 +479,11 @@ elf_w (xz_decompress) (uint8_t* src, size_t src_size,
   do {
     *dst_size *= 2;
     *dst = realloc(*dst, *dst_size);
+    if (*dst == NULL) {
+      Debug (1, "LZMA decompression failed due to failed realloc.\n");
+      XzUnpacker_Free(&state);
+      return false;
+    }
     src_remaining = src_size - src_offset;
     dst_remaining = *dst_size - dst_offset;
     int res = XzUnpacker_Code(&state,
@@ -553,14 +558,23 @@ elf_w (find_section_mapped) (struct elf_image *ei, const char* name,
   return false;
 }
 
-static bool
-elf_w (extract_minidebuginfo_mapped) (struct elf_image *ei, struct elf_image *mdi)
-{
+static bool elf_w (extract_minidebuginfo_mapped) (struct elf_image *ei, uint8_t** data, size_t* size) {
+  if (ei->mini_debug_info_data != NULL) {
+    // Return cached result.
+    *data = ei->mini_debug_info_data;
+    *size = ei->mini_debug_info_size;
+    return true;
+  }
   uint8_t *compressed = NULL;
   size_t compressed_len;
   if (elf_w (find_section_mapped) (ei, ".gnu_debugdata", &compressed, &compressed_len, NULL)) {
-    return elf_w (xz_decompress) (compressed, compressed_len,
-                                  (uint8_t**)&mdi->u.mapped.image, &mdi->u.mapped.size);
+    if (elf_w (xz_decompress) (compressed, compressed_len, data, size)) {
+      // Also cache the result for next time.
+      ei->mini_debug_info_data = *data;
+      ei->mini_debug_info_size = *size;
+      Debug (1, "Decompressed and cached .gnu_debugdata");
+      return true;
+    }
   }
   return false;
 }
@@ -584,10 +598,14 @@ HIDDEN bool elf_w (get_proc_name_in_image) (
 
   // If the ELF image doesn't contain a match, look up the symbol in
   // the MiniDebugInfo.
-  struct elf_image mdi;
-  if (ei->mapped && elf_w (extract_minidebuginfo_mapped) (ei, &mdi)) {
-    mdi.valid = elf_w (valid_object_mapped) (&mdi);
+  uint8_t* mdi_data;
+  size_t mdi_size;
+  if (ei->mapped && elf_w (extract_minidebuginfo_mapped) (ei, &mdi_data, &mdi_size)) {
+    struct elf_image mdi;
     mdi.mapped = true;
+    mdi.u.mapped.image = mdi_data;
+    mdi.u.mapped.size = mdi_size;
+    mdi.valid = elf_w (valid_object_mapped) (&mdi);
     // The ELF file might have been relocated after the debug
     // information has been compresses and embedded.
     ElfW(Addr) ei_text_address, mdi_text_address;
@@ -596,7 +614,6 @@ HIDDEN bool elf_w (get_proc_name_in_image) (
       load_offset += ei_text_address - mdi_text_address;
     }
     bool ret_val = elf_w (lookup_symbol) (as, ip, &mdi, load_offset, buf, buf_len, offp, &ehdr);
-    free(mdi.u.mapped.image);
     return ret_val;
   }
   return false;
@@ -606,13 +623,13 @@ HIDDEN bool elf_w (get_proc_name) (
     unw_addr_space_t as, pid_t pid, unw_word_t ip, char* buf, size_t buf_len,
     unw_word_t* offp, void* as_arg) {
   unsigned long segbase, mapoff;
-  struct elf_image ei;
+  struct elf_image* ei;
 
   if (tdep_get_elf_image(as, &ei, pid, ip, &segbase, &mapoff, NULL, as_arg) < 0) {
     return false;
   }
 
-  return elf_w (get_proc_name_in_image) (as, &ei, segbase, mapoff, ip, buf, buf_len, offp);
+  return elf_w (get_proc_name_in_image) (as, ei, segbase, mapoff, ip, buf, buf_len, offp);
 }
 
 HIDDEN bool elf_w (get_load_base) (struct elf_image* ei, unw_word_t mapoff, unw_word_t* load_base) {

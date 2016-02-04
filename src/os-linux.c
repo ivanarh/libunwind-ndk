@@ -62,6 +62,8 @@ map_create_list (int map_create_type, pid_t pid)
       cur_map->ei.valid = false;
       cur_map->ei.load_attempted = false;
       cur_map->ei.mapped = false;
+      cur_map->ei.mini_debug_info_data = NULL;
+      cur_map->ei.mini_debug_info_size = 0;
 
       /* Indicate mapped memory of devices is special and should not
          be read or written. Use a special flag instead of zeroing the

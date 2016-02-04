@@ -26,12 +26,12 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 #include "libunwind_i.h"
 #include "map_info.h"
 
-extern int local_get_elf_image (unw_addr_space_t as, struct elf_image *,
+extern int local_get_elf_image (unw_addr_space_t as, struct elf_image **,
                                 unw_word_t, unsigned long *, unsigned long *,
                                 char **, void *);
 
 PROTECTED int
-tdep_get_elf_image (unw_addr_space_t as, struct elf_image *ei,
+tdep_get_elf_image (unw_addr_space_t as, struct elf_image **ei,
                     pid_t pid, unw_word_t ip,
                     unsigned long *segbase, unsigned long *mapoff, char **path,
                     void *as_arg)
@@ -48,9 +48,9 @@ tdep_get_elf_image (unw_addr_space_t as, struct elf_image *ei,
   if (!elf_map_cached_image (as, as_arg, map, ip))
     return -UNW_ENOINFO;
 
-  *ei = map->ei;
+  *ei = &map->ei;
   *segbase = map->start;
-  if (ei->mapped)
+  if ((*ei)->mapped)
     *mapoff = map->offset;
   else
     /* Always use zero as the map offset for in memory maps. The

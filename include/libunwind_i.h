@@ -329,6 +329,8 @@ struct elf_image
     bool valid;			/* true if the image is a valid elf image */
     bool load_attempted;	/* true if we've already attempted to load the elf */
     bool mapped;		/* true if the elf image was mmap'd in */
+    void* mini_debug_info_data;  /* decompressed .gnu_debugdata section */
+    size_t mini_debug_info_size;
     union
       {
         struct
