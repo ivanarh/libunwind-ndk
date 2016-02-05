@@ -383,6 +383,8 @@ cc_library {
     export_include_dirs: ["include"],
     stl: "none",
 
+    shared_libs: ["liblzma"],
+
     /*debug: {
     shared_libs: ["liblog"],
     cflags: libunwind_common_debug_cflags,
