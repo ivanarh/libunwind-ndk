@@ -142,7 +142,8 @@ map_create_list (int map_create_type, pid_t pid)
               if (as)
                 {
                   ei.mapped = false;
-                  ei.u.memory.map = cur_map;
+                  ei.u.memory.start = cur_map->start;
+                  ei.u.memory.end = cur_map->end;
                   ei.u.memory.as = as;
                   ei.u.memory.as_arg = as_arg;
                   ei.valid = elf_w (valid_object_memory) (&ei);
