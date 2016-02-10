@@ -66,9 +66,6 @@ move_cached_elf_data (struct map_info *old_list, struct map_info *new_list)
               /* No need to do any lock, the entire local_map_list is locked
                  at this point. */
               new_list->ei = old_list->ei;
-              /* Adjust the map pointer in the elf image data if necessary. */
-              if (!new_list->ei.mapped)
-                new_list->ei.u.memory.map = new_list;
               /* If it was mapped before, make sure to mark it unmapped now. */
               old_list->ei.mapped = false;
               /* Clear the old mini debug info so we do not try to free it twice */
@@ -176,7 +173,7 @@ map_local_is_writable (unw_word_t addr, size_t write_bytes)
 }
 
 PROTECTED int
-local_get_elf_image (unw_addr_space_t as, struct elf_image **ei, unw_word_t ip,
+local_get_elf_image (unw_addr_space_t as, struct elf_image *ei, unw_word_t ip,
                      unsigned long *segbase, unsigned long *mapoff, char **path, void *as_arg)
 {
   struct map_info *map;
@@ -197,9 +194,13 @@ local_get_elf_image (unw_addr_space_t as, struct elf_image **ei, unw_word_t ip,
 
   if (map && elf_map_cached_image (as, as_arg, map, ip))
     {
-      *ei = &map->ei;
+      /* It is absolutely necessary that the elf structure is a copy of
+       * the map data. The map could be rebuilt and the old ei pointer
+       * will be modified and thrown away.
+       */
+      *ei = map->ei;
       *segbase = map->start;
-      if ((*ei)->mapped)
+      if (ei->mapped)
         *mapoff = map->offset;
       else
         /* Always use zero as the map offset for in memory maps. The

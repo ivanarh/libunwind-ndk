@@ -48,7 +48,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
   { \
     if (!check_cached || (elf_struct)->field == 0) { \
       if (sizeof((elf_struct)->field) != elf_w (memory_read) ( \
-          ei, ei->u.memory.map->start + offset + offsetof(struct_name, field), \
+          ei, ei->u.memory.start + offset + offsetof(struct_name, field), \
           (uint8_t*) &((elf_struct)->field), sizeof((elf_struct)->field), false)) { \
         return false; \
       } \
@@ -102,8 +102,8 @@ static inline bool elf_w (valid_object_mapped) (struct elf_image* ei) {
 
 static inline bool elf_w (valid_object_memory) (struct elf_image* ei) {
   uint8_t e_ident[EI_NIDENT];
-  struct map_info* map = ei->u.memory.map;
-  if (SELFMAG != elf_w (memory_read) (ei, map->start, e_ident, SELFMAG, false)) {
+  uintptr_t start = ei->u.memory.start;
+  if (SELFMAG != elf_w (memory_read) (ei, start, e_ident, SELFMAG, false)) {
     return false;
   }
   if (memcmp (e_ident, ELFMAG, SELFMAG) != 0) {
@@ -111,7 +111,7 @@ static inline bool elf_w (valid_object_memory) (struct elf_image* ei) {
   }
   // Read the rest of the ident data.
   if (EI_NIDENT - SELFMAG != elf_w (memory_read) (
-      ei, map->start + SELFMAG, e_ident + SELFMAG, EI_NIDENT - SELFMAG, false)) {
+      ei, start + SELFMAG, e_ident + SELFMAG, EI_NIDENT - SELFMAG, false)) {
     return false;
   }
   return e_ident[EI_CLASS] == ELF_CLASS && e_ident[EI_VERSION] != EV_NONE
@@ -177,7 +177,8 @@ static inline bool elf_map_cached_image (
       // If the image cannot be loaded, we'll read data directly from
       // the process using the access_mem function.
       if (map->flags & PROT_READ) {
-        map->ei.u.memory.map = map;
+        map->ei.u.memory.start = map->start;
+        map->ei.u.memory.end = map->end;
         map->ei.u.memory.as = as;
         map->ei.u.memory.as_arg = as_arg;
         map->ei.valid = elf_w (valid_object_memory) (&map->ei);

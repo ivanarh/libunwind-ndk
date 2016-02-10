@@ -40,10 +40,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 // --------------------------------------------------------------------------
 extern size_t elf_w (memory_read) (
     struct elf_image* ei, unw_word_t addr, uint8_t* buffer, size_t bytes, bool string_read) {
-  struct map_info* map = ei->u.memory.map;
+  uintptr_t end = ei->u.memory.end;
   unw_accessors_t* a = unw_get_accessors (ei->u.memory.as);
-  if (map->end - addr < bytes) {
-    bytes = map->end - addr;
+  if (end - addr < bytes) {
+    bytes = end - addr;
   }
   size_t bytes_read = 0;
   unw_word_t data_word;
@@ -115,7 +115,7 @@ static bool elf_w (section_table_offset) (struct elf_image* ei, Elf_W(Ehdr)* ehd
   GET_EHDR_FIELD(ei, ehdr, e_shentsize, true);
   GET_EHDR_FIELD(ei, ehdr, e_shnum, true);
 
-  uintptr_t size = ei->u.memory.map->end - ei->u.memory.map->start;
+  uintptr_t size = ei->u.memory.end - ei->u.memory.start;
   if (ehdr->e_shoff + ehdr->e_shnum * ehdr->e_shentsize > size) {
     Debug (1, "section table outside of image? (%lu > %lu)\n",
            (unsigned long) (ehdr->e_shoff + ehdr->e_shnum * ehdr->e_shentsize),
@@ -132,7 +132,7 @@ static bool elf_w (string_table_offset) (
   GET_EHDR_FIELD(ei, ehdr, e_shoff, true);
   GET_EHDR_FIELD(ei, ehdr, e_shentsize, true);
   unw_word_t str_soff = ehdr->e_shoff + (section * ehdr->e_shentsize);
-  uintptr_t size = ei->u.memory.map->end - ei->u.memory.map->start;
+  uintptr_t size = ei->u.memory.end - ei->u.memory.start;
   if (str_soff + ehdr->e_shentsize > size) {
     Debug (1, "string shdr table outside of image? (%lu > %lu)\n",
            (unsigned long) (str_soff + ehdr->e_shentsize),
@@ -209,7 +209,7 @@ static bool elf_w (lookup_symbol_memory) (
             GET_SYM_FIELD(ei, sym_offset, &sym, st_size);
             if (ip >= val && (Elf_W(Addr)) (ip - val) < sym.st_size) {
               GET_SYM_FIELD(ei, sym_offset, &sym, st_name);
-              uintptr_t size = ei->u.memory.map->end - ei->u.memory.map->start;
+              uintptr_t size = ei->u.memory.end - ei->u.memory.start;
               Elf_W(Off) strname_offset = strtab_offset + sym.st_name;
               if (strname_offset > size || strname_offset < strtab_offset) {
                 // Malformed elf symbol table.
@@ -217,7 +217,7 @@ static bool elf_w (lookup_symbol_memory) (
               }
 
               size_t bytes_read = elf_w (memory_read) (
-                  ei, ei->u.memory.map->start + strname_offset,
+                  ei, ei->u.memory.start + strname_offset,
                   (uint8_t*) buf, buf_len, true);
               if (bytes_read == 0) {
                 // Empty name, so keep checking the other symbol tables
@@ -623,13 +623,13 @@ HIDDEN bool elf_w (get_proc_name) (
     unw_addr_space_t as, pid_t pid, unw_word_t ip, char* buf, size_t buf_len,
     unw_word_t* offp, void* as_arg) {
   unsigned long segbase, mapoff;
-  struct elf_image* ei;
+  struct elf_image ei;
 
   if (tdep_get_elf_image(as, &ei, pid, ip, &segbase, &mapoff, NULL, as_arg) < 0) {
     return false;
   }
 
-  return elf_w (get_proc_name_in_image) (as, ei, segbase, mapoff, ip, buf, buf_len, offp);
+  return elf_w (get_proc_name_in_image) (as, &ei, segbase, mapoff, ip, buf, buf_len, offp);
 }
 
 HIDDEN bool elf_w (get_load_base) (struct elf_image* ei, unw_word_t mapoff, unw_word_t* load_base) {
