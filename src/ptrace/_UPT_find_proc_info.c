@@ -37,7 +37,7 @@ get_unwind_info (struct elf_dyn_info *edi, pid_t pid, unw_addr_space_t as, unw_w
 {
   /* ANDROID support update. */
   unsigned long segbase, mapoff;
-  struct elf_image* ei;
+  struct elf_image ei;
   int ret;
   char *path = NULL;
   /* End of ANDROID update. */
@@ -66,7 +66,7 @@ get_unwind_info (struct elf_dyn_info *edi, pid_t pid, unw_addr_space_t as, unw_w
   if (tdep_get_elf_image (as, &ei, pid, ip, &segbase, &mapoff, &path, as_arg) < 0)
     return -UNW_ENOINFO;
 
-  ret = tdep_find_unwind_table (edi, ei, as, path, segbase, mapoff, ip);
+  ret = tdep_find_unwind_table (edi, &ei, as, path, segbase, mapoff, ip);
   free(path);
   if (ret < 0)
     return ret;
