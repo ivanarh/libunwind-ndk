@@ -558,6 +558,12 @@ elf_w (find_section_mapped) (struct elf_image *ei, const char* name,
   return false;
 }
 
+/* Temporarily disable compressed section header support. */
+static bool elf_w (extract_minidebuginfo_mapped) (struct elf_image *ei, uint8_t** data, size_t* size) {
+  return false;
+}
+
+#if 0
 static bool elf_w (extract_minidebuginfo_mapped) (struct elf_image *ei, uint8_t** data, size_t* size) {
   if (ei->mini_debug_info_data != NULL) {
     // Return cached result.
@@ -578,6 +584,7 @@ static bool elf_w (extract_minidebuginfo_mapped) (struct elf_image *ei, uint8_t*
   }
   return false;
 }
+#endif
 /* ANDROID support update. */
 
 // Find the ELF image that contains IP and return the procedure name from
