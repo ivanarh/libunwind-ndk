@@ -557,27 +557,6 @@ elf_w (find_section_mapped) (struct elf_image *ei, const char* name,
   }
   return false;
 }
-
-static bool elf_w (extract_minidebuginfo_mapped) (struct elf_image *ei, uint8_t** data, size_t* size) {
-  if (ei->mini_debug_info_data != NULL) {
-    // Return cached result.
-    *data = ei->mini_debug_info_data;
-    *size = ei->mini_debug_info_size;
-    return true;
-  }
-  uint8_t *compressed = NULL;
-  size_t compressed_len;
-  if (elf_w (find_section_mapped) (ei, ".gnu_debugdata", &compressed, &compressed_len, NULL)) {
-    if (elf_w (xz_decompress) (compressed, compressed_len, data, size)) {
-      // Also cache the result for next time.
-      ei->mini_debug_info_data = *data;
-      ei->mini_debug_info_size = *size;
-      Debug (1, "Decompressed and cached .gnu_debugdata");
-      return true;
-    }
-  }
-  return false;
-}
 /* ANDROID support update. */
 
 // Find the ELF image that contains IP and return the procedure name from
@@ -598,13 +577,11 @@ HIDDEN bool elf_w (get_proc_name_in_image) (
 
   // If the ELF image doesn't contain a match, look up the symbol in
   // the MiniDebugInfo.
-  uint8_t* mdi_data;
-  size_t mdi_size;
-  if (ei->mapped && elf_w (extract_minidebuginfo_mapped) (ei, &mdi_data, &mdi_size)) {
+  if (ei->mapped && ei->mini_debug_info_data) {
     struct elf_image mdi;
     mdi.mapped = true;
-    mdi.u.mapped.image = mdi_data;
-    mdi.u.mapped.size = mdi_size;
+    mdi.u.mapped.image = ei->mini_debug_info_data;
+    mdi.u.mapped.size = ei->mini_debug_info_size;
     mdi.valid = elf_w (valid_object_mapped) (&mdi);
     // The ELF file might have been relocated after the debug
     // information has been compresses and embedded.
