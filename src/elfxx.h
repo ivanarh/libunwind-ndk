@@ -183,6 +183,20 @@ static inline bool elf_map_cached_image (
         map->ei.u.memory.as_arg = as_arg;
         map->ei.valid = elf_w (valid_object_memory) (&map->ei);
       }
+    } else {
+      // Try to cache the minidebuginfo data.
+      uint8_t *compressed = NULL;
+      size_t compressed_len;
+      if (elf_w (find_section_mapped) (&map->ei, ".gnu_debugdata", &compressed,
+          &compressed_len, NULL)) {
+        if (elf_w (xz_decompress) (compressed, compressed_len,
+            (uint8_t**) &map->ei.mini_debug_info_data, &map->ei.mini_debug_info_size)) {
+          Debug (1, "Decompressed and cached .gnu_debugdata");
+        } else {
+          map->ei.mini_debug_info_data = NULL;
+          map->ei.mini_debug_info_size = 0;
+        }
+      }
     }
     unw_word_t load_base;
     if (map->ei.valid && elf_w (get_load_base) (&map->ei, map->offset, &load_base)) {
