@@ -30,8 +30,9 @@ libunwind_common_cppflags := \
     -Wno-old-style-cast \
 
 libunwind_common_cflags := \
-    -Wno-unused-parameter \
     -Werror \
+    -Wno-\#pragma-messages \
+    -Wno-unused-parameter \
 
 # gcc 4.8 appears to be overeager declaring that a variable is uninitialized,
 # under certain circumstances. Turn off this warning only for target so that
