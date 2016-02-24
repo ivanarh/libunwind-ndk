@@ -75,8 +75,8 @@ map_create_list (int map_create_type, pid_t pid)
           && strncmp ("ashmem/", cur_map->path + 5, 7) != 0)
         cur_map->flags |= MAP_FLAGS_DEVICE_MEM;
 
-      /* Remove readable bit from any map ending in (deleted) that is
-         not executable and is not a shared library. The shared library
+      /* Remove readable bit from any empty map or a map ending in (deleted)
+         that is not executable and is not a shared library. The shared library
          restriction is so that if a shared library has been deleted,
          the unwind from memory can still access the other possible
          shared memory readable segments.  */
@@ -91,6 +91,8 @@ map_create_list (int map_create_type, pid_t pid)
                   SHARED_LIB, sizeof(SHARED_LIB) - 1) != 0) {
           cur_map->flags &= ~PROT_READ;
         }
+      } else if (path_len == 0 && (cur_map->flags & PROT_EXEC)) {
+        cur_map->flags &= ~PROT_READ;
       }
 
       /* If this is a readable executable map, and not a stack map or an
