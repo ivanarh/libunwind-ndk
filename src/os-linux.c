@@ -75,24 +75,6 @@ map_create_list (int map_create_type, pid_t pid)
           && strncmp ("ashmem/", cur_map->path + 5, 7) != 0)
         cur_map->flags |= MAP_FLAGS_DEVICE_MEM;
 
-      /* Remove readable bit from any map ending in (deleted) that is
-         not executable and is not a shared library. The shared library
-         restriction is so that if a shared library has been deleted,
-         the unwind from memory can still access the other possible
-         shared memory readable segments.  */
-      #define DELETED_STR " (deleted)"
-      #define SHARED_LIB ".so"
-      size_t path_len = strlen(cur_map->path);
-      if (path_len >= sizeof(DELETED_STR) &&
-          strcmp(&cur_map->path[path_len - sizeof(DELETED_STR) + 1], DELETED_STR) == 0 &&
-          (cur_map->flags & PROT_EXEC) == 0) {
-        if (path_len + 2 < sizeof(DELETED_STR) + sizeof(SHARED_LIB) ||
-          strncmp(&cur_map->path[path_len - sizeof(DELETED_STR) - sizeof(SHARED_LIB) + 2],
-                  SHARED_LIB, sizeof(SHARED_LIB) - 1) != 0) {
-          cur_map->flags &= ~PROT_READ;
-        }
-      }
-
       /* If this is a readable executable map, and not a stack map or an
          empty map, find the load_base.  */
       if (cur_map->path[0] != '\0' && strncmp ("[stack:", cur_map->path, 7) != 0
