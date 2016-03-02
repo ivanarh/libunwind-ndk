@@ -169,7 +169,15 @@ load_debug_frame (const char *file, char **buf, size_t *bufsize,
 		 linksize, (long) sec_hdrs[i].sh_offset);
 	}
     /* ANDROID support update. */
-      else if (sec_position + sizeof(".gnu_debugdata") <= sec_size
+      // Do not process the compressed section for local unwinds.
+      // Uncompressing this section can consume a large amount of memory
+      // and cause the unwind to take longer, which can cause problems
+      // when an ANR occurs in the system. Compressed sections are
+      // only used to contain java stack trace information. Since ART is
+      // one of the only ways that a local trace is done, and it already
+      // dumps the java stack, this information is redundant.
+      else if (local_map_list == NULL
+          && sec_position + sizeof(".gnu_debugdata") <= sec_size
           && strcmp (secname, ".gnu_debugdata") == 0)
         {
           size_t xz_size = sec_hdrs[i].sh_size;
