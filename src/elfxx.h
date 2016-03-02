@@ -153,7 +153,8 @@ static inline bool elf_map_image (struct elf_image* ei, const char* path) {
 }
 
 static inline bool elf_map_cached_image (
-    unw_addr_space_t as, void* as_arg, struct map_info* map, unw_word_t ip) {
+    unw_addr_space_t as, void* as_arg, struct map_info* map, unw_word_t ip,
+    bool local_unwind) {
   intrmask_t saved_mask;
 
   // Don't even try and cache this unless the map is readable and executable.
@@ -183,7 +184,15 @@ static inline bool elf_map_cached_image (
         map->ei.u.memory.as_arg = as_arg;
         map->ei.valid = elf_w (valid_object_memory) (&map->ei);
       }
-    } else {
+    } else if (!local_unwind) {
+      // Do not process the compressed section for local unwinds.
+      // Uncompressing this section can consume a large amount of memory
+      // and cause the unwind to take longer, which can cause problems
+      // when an ANR occurs in the system. Compressed sections are
+      // only used to contain java stack trace information. Since ART is
+      // one of the only ways that a local trace is done, and it already
+      // dumps the java stack, this information is redundant.
+
       // Try to cache the minidebuginfo data.
       uint8_t *compressed = NULL;
       size_t compressed_len;
