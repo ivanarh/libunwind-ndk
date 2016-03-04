@@ -24,8 +24,9 @@ libunwind_common_cppflags = [
 ]
 
 libunwind_common_cflags = [
-    "-Wno-unused-parameter",
     "-Werror",
+    "-Wno-#pragma-messages",
+    "-Wno-unused-parameter",
 ]
 
 // gcc 4.8 appears to be overeager declaring that a variable is uninitialized,
@@ -381,7 +382,6 @@ cc_library {
     },
 
     export_include_dirs: ["include"],
-    stl: "none",
 
     shared_libs: ["liblzma"],
 
@@ -438,7 +438,6 @@ cc_library_static {
     },
 
     whole_static_libs: ["libunwind"],
-    stl: "none",
 }
 
 /*
