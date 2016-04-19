@@ -211,6 +211,11 @@ static inline bool elf_map_cached_image (
     if (map->ei.valid && elf_w (get_load_base) (&map->ei, map->offset, &load_base)) {
       map->load_base = load_base;
     }
+  } else if (map->ei.valid && !map->ei.mapped && map->ei.u.memory.as != as) {
+    // If this map is only in memory, this might be a cached map
+    // that crosses over multiple unwinds. In this case, we've detected
+    // that the as is stale, so set it to a valid as.
+    map->ei.u.memory.as = as;
   }
   lock_release (&map->ei_lock, saved_mask);
   return map->ei.valid;
