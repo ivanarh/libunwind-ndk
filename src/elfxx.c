@@ -635,7 +635,11 @@ HIDDEN bool elf_w (get_load_base) (struct elf_image* ei, unw_word_t mapoff, unw_
       Elf_W(Phdr) phdr;
       GET_PHDR_FIELD(ei, offset, &phdr, p_type);
       GET_PHDR_FIELD(ei, offset, &phdr, p_offset);
-      if (phdr.p_type == PT_LOAD && phdr.p_offset == mapoff) {
+      // Always use zero as the map offset for in memory maps.
+      // The dlopen of a shared library from an APK will result in a
+      // non-zero map offset which would mean we would never find the
+      // correct program header using the passed in map offset.
+      if (phdr.p_type == PT_LOAD && phdr.p_offset == 0) {
         GET_PHDR_FIELD(ei, offset, &phdr, p_vaddr);
         *load_base = phdr.p_vaddr;
         return true;
