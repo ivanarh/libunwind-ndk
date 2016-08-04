@@ -101,7 +101,7 @@ cc_defaults {
 cc_library {
     name: "libunwind",
     defaults: ["libunwind_defaults"],
-    sdk_version: "23",
+    sdk_version: "21",
 
     srcs: [
         "src/mi/init.c",
@@ -402,7 +402,7 @@ cc_library {
 cc_library_static {
     name: "libunwindbacktrace",
     defaults: ["libunwind_defaults"],
-    sdk_version: "23",
+    sdk_version: "21",
     srcs: [
         "src/unwind/BacktraceWrapper.c",
         "src/unwind/DeleteException.c",
