@@ -379,12 +379,16 @@ cc_library {
         android: {
             shared_libs: ["libdl"],
         },
-        host: {
+        linux: {
             ldflags: ["-nostdlib"],
             host_ldlibs: [
                 "-lc",
                 "-lpthread",
             ],
+        },
+        linux_bionic: {
+            enabled: true,
+            shared_libs: ["libdl"],
         },
     },
 
@@ -431,6 +435,12 @@ cc_library_static {
     ],
 
     whole_static_libs: ["libunwind"],
+
+    target: {
+        linux_bionic: {
+            enabled: true,
+        },
+    },
 }
 
 //-----------------------------------------------------------------------
