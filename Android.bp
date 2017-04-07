@@ -22,6 +22,7 @@
 cc_defaults {
     name: "libunwind_defaults",
     host_supported: true,
+    vendor_available: true,
 
     cppflags: [
         "-Wno-old-style-cast",
