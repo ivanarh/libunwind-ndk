@@ -80,7 +80,6 @@ file(GLOB UNWIND_SOURCES_COMMON
     ${UNWIND_ROOT}/src/ptrace/_UPT_put_unwind_info.c
     ${UNWIND_ROOT}/src/ptrace/_UPT_reg_offset.c
     ${UNWIND_ROOT}/src/ptrace/_UPT_resume.c
-    ${UNWIND_ROOT}/src/dl_iterate_phdr.c
 
     # 32-bit architectures. Now we target android-15, it doesn't support 64 bit.
 	${UNWIND_ROOT}/src/elf32.c
@@ -149,7 +148,7 @@ elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES arm)
         ${UNWIND_ROOT}/src/arm/Lregs.c
         ${UNWIND_ROOT}/src/arm/Lresume.c
         ${UNWIND_ROOT}/src/arm/Lstep.c
-        ${UNWIND_ROOT}/src/arm/dl-iterate-phdr-android.c
+        ${UNWIND_ROOT}/src/arm/dl_iterate_phdr.c
     )
     file(GLOB UNWIND_SOURCES_ASM
         ${UNWIND_ROOT}/src/arm/getcontext.S
