@@ -2,8 +2,16 @@
 #include <stdbool.h>
 #include <dlfcn.h>
 #include <fcntl.h>
+#include <elf.h>
 #include "os-linux.h"
 #include "libunwind_i.h"
+
+#ifndef IS_ELF
+#define IS_ELF(ehdr) ((ehdr).e_ident[EI_MAG0] == ELFMAG0 && \
+                      (ehdr).e_ident[EI_MAG1] == ELFMAG1 && \
+                      (ehdr).e_ident[EI_MAG2] == ELFMAG2 && \
+                      (ehdr).e_ident[EI_MAG3] == ELFMAG3)
+#endif
 
 #ifdef __arm__
 
