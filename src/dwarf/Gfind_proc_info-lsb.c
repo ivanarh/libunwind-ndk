@@ -33,6 +33,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 #include "dwarf_i.h"
 #include "dwarf-eh.h"
 #include "libunwind_i.h"
+#include "dl_iterate_phdr.h"
 
 struct table_entry
   {

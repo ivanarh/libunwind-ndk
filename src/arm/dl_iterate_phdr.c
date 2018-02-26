@@ -1,4 +1,4 @@
-#include <link.h>
+#include "dl_iterate_phdr.h"
 #include <stdbool.h>
 #include <dlfcn.h>
 #include <fcntl.h>
@@ -13,7 +13,7 @@
                       (ehdr).e_ident[EI_MAG3] == ELFMAG3)
 #endif
 
-#ifdef __arm__
+#if defined(__arm__) && __ANDROID_API__ < 21
 
 // Function types: callback and function itself.
 typedef int (*dl_iterate_phdr_callback) (struct dl_phdr_info *info, size_t size, void *data);
@@ -21,14 +21,7 @@ typedef int (*dl_iterate_phdr_signature)(dl_iterate_phdr_callback callback, void
 
 int dl_iterate_phdr(int (*callback)(struct dl_phdr_info*, size_t, void*), void *data)
 {
-    // NOTE: The function is not reentrant.
-    static dl_iterate_phdr_signature dl_iterate_phdr_address = NULL;
-    static bool initialized = false;
-    if (!initialized) {
-        initialized = true;
-        dl_iterate_phdr_address = (dl_iterate_phdr_signature) dlsym(RTLD_NEXT, "dl_iterate_phdr");
-    }
-
+    dl_iterate_phdr_signature dl_iterate_phdr_address = (dl_iterate_phdr_signature) dlsym(RTLD_NEXT, "dl_iterate_phdr");
     if (dl_iterate_phdr_address) {
         return dl_iterate_phdr_address(callback, data);
     }
@@ -63,4 +56,4 @@ int dl_iterate_phdr(int (*callback)(struct dl_phdr_info*, size_t, void*), void *
     return rc;
 }
 
-#endif
+#endif //defined(__arm__) && __ANDROID_API__ < 21

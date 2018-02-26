@@ -29,6 +29,7 @@ http://infocenter.arm.com/help/topic/com.arm.doc.ihi0038a/IHI0038A_ehabi.pdf
 */ 
 
 #include "libunwind_i.h"
+#include "dl_iterate_phdr.h"
 
 #define ARM_EXBUF_START(x)	(((x) >> 4) & 0x0f)
 #define ARM_EXBUF_COUNT(x)	((x) & 0x0f)
