@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 2.8)
 set(UNWIND_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../)
 
-add_subdirectory(lzma)
+if (NOT TARGET lzma)
+    add_subdirectory(lzma)
+endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-format")
 
