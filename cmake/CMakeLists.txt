@@ -82,9 +82,6 @@ file(GLOB UNWIND_SOURCES_COMMON
     ${UNWIND_ROOT}/src/ptrace/_UPT_put_unwind_info.c
     ${UNWIND_ROOT}/src/ptrace/_UPT_reg_offset.c
     ${UNWIND_ROOT}/src/ptrace/_UPT_resume.c
-
-    # 32-bit architectures. Now we target android-15, it doesn't support 64 bit.
-	${UNWIND_ROOT}/src/elf32.c
 )
 
 #Platform-specific sources
@@ -116,9 +113,49 @@ if (${CMAKE_SYSTEM_PROCESSOR} MATCHES i686)
         ${UNWIND_ROOT}/src/x86/Lstep.c
         ${UNWIND_ROOT}/src/x86/is_fpreg.c
         ${UNWIND_ROOT}/src/x86/regname.c
+        ${UNWIND_ROOT}/src/elf32.c
      )
     file(GLOB UNWIND_SOURCES_ASM
         ${UNWIND_ROOT}/src/x86/getcontext-linux.S
+    )
+elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES x86_64)
+    include_directories(${UNWIND_ROOT}/include/tdep-x86_64)
+
+    file(GLOB UNWIND_SOURCES_ARCH
+        ${UNWIND_ROOT}/src/x86_64/Gcreate_addr_space.c
+        ${UNWIND_ROOT}/src/x86_64/Gget_proc_info.c
+        ${UNWIND_ROOT}/src/x86_64/Gget_save_loc.c
+        ${UNWIND_ROOT}/src/x86_64/Gglobal.c
+        ${UNWIND_ROOT}/src/x86_64/Ginit.c
+        ${UNWIND_ROOT}/src/x86_64/Ginit_local.c
+        ${UNWIND_ROOT}/src/x86_64/Ginit_remote.c
+        ${UNWIND_ROOT}/src/x86_64/Gos-linux.c
+        ${UNWIND_ROOT}/src/x86_64/Gregs.c
+        ${UNWIND_ROOT}/src/x86_64/Gresume.c
+        ${UNWIND_ROOT}/src/x86_64/Gstash_frame.c
+        ${UNWIND_ROOT}/src/x86_64/Gstep.c
+        ${UNWIND_ROOT}/src/x86_64/Gtrace.c
+        ${UNWIND_ROOT}/src/x86_64/Lcreate_addr_space.c
+        ${UNWIND_ROOT}/src/x86_64/Lget_proc_info.c
+        ${UNWIND_ROOT}/src/x86_64/Lget_save_loc.c
+        ${UNWIND_ROOT}/src/x86_64/Lglobal.c
+        ${UNWIND_ROOT}/src/x86_64/Linit.c
+        ${UNWIND_ROOT}/src/x86_64/Linit_local.c
+        ${UNWIND_ROOT}/src/x86_64/Linit_remote.c
+        ${UNWIND_ROOT}/src/x86_64/Los-linux.c
+        ${UNWIND_ROOT}/src/x86_64/Lregs.c
+        ${UNWIND_ROOT}/src/x86_64/Lresume.c
+        ${UNWIND_ROOT}/src/x86_64/Lstash_frame.c
+        ${UNWIND_ROOT}/src/x86_64/Lstep.c
+        ${UNWIND_ROOT}/src/x86_64/Ltrace.c
+        ${UNWIND_ROOT}/src/x86_64/is_fpreg.c
+        ${UNWIND_ROOT}/src/x86_64/regname.c
+        ${UNWIND_ROOT}/src/elf64.c
+    )
+
+    file(GLOB UNWIND_SOURCES_ASM
+        ${UNWIND_ROOT}/src/x86_64/getcontext.S
+        ${UNWIND_ROOT}/src/x86_64/setcontext.S
     )
 elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES arm)
     include_directories(${UNWIND_ROOT}/include/tdep-arm)
@@ -151,12 +188,13 @@ elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES arm)
         ${UNWIND_ROOT}/src/arm/Lresume.c
         ${UNWIND_ROOT}/src/arm/Lstep.c
         ${UNWIND_ROOT}/src/arm/dl_iterate_phdr.c
+        ${UNWIND_ROOT}/src/elf32.c
     )
     file(GLOB UNWIND_SOURCES_ASM
         ${UNWIND_ROOT}/src/arm/getcontext.S
     )
 else()
-    message(ERROR "Unsupported architecture")
+    message(FATAL_ERROR "Unsupported architecture: ${CMAKE_SYSTEM_PROCESSOR}")
 endif()
 
 set_source_files_properties(${UNWIND_SOURCES_ASM} PROPERTIES LANGUAGE C)
