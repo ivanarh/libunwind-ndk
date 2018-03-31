@@ -193,6 +193,37 @@ elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES arm)
     file(GLOB UNWIND_SOURCES_ASM
         ${UNWIND_ROOT}/src/arm/getcontext.S
     )
+elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES aarch64)
+    include_directories(${UNWIND_ROOT}/include/tdep-aarch64)
+
+    file(GLOB UNWIND_SOURCES_ARCH
+        ${UNWIND_ROOT}/src/aarch64/Gcreate_addr_space.c
+        ${UNWIND_ROOT}/src/aarch64/Gget_proc_info.c
+        ${UNWIND_ROOT}/src/aarch64/Gget_save_loc.c
+        ${UNWIND_ROOT}/src/aarch64/Gglobal.c
+        ${UNWIND_ROOT}/src/aarch64/Ginit.c
+        ${UNWIND_ROOT}/src/aarch64/Ginit_local.c
+        ${UNWIND_ROOT}/src/aarch64/Ginit_remote.c
+        ${UNWIND_ROOT}/src/aarch64/Gis_signal_frame.c
+        ${UNWIND_ROOT}/src/aarch64/Gregs.c
+        ${UNWIND_ROOT}/src/aarch64/Gresume.c
+        ${UNWIND_ROOT}/src/aarch64/Gstep.c
+        ${UNWIND_ROOT}/src/aarch64/Lcreate_addr_space.c
+        ${UNWIND_ROOT}/src/aarch64/Lget_proc_info.c
+        ${UNWIND_ROOT}/src/aarch64/Lget_save_loc.c
+        ${UNWIND_ROOT}/src/aarch64/Lglobal.c
+        ${UNWIND_ROOT}/src/aarch64/Linit.c
+        ${UNWIND_ROOT}/src/aarch64/Linit_local.c
+        ${UNWIND_ROOT}/src/aarch64/Linit_remote.c
+        ${UNWIND_ROOT}/src/aarch64/Lis_signal_frame.c
+        ${UNWIND_ROOT}/src/aarch64/Lregs.c
+        ${UNWIND_ROOT}/src/aarch64/Lresume.c
+        ${UNWIND_ROOT}/src/aarch64/Lstep.c
+        ${UNWIND_ROOT}/src/aarch64/gen-offsets.c
+        ${UNWIND_ROOT}/src/aarch64/is_fpreg.c
+        ${UNWIND_ROOT}/src/aarch64/regname.c
+        ${UNWIND_ROOT}/src/elf64.c
+    )
 else()
     message(FATAL_ERROR "Unsupported architecture: ${CMAKE_SYSTEM_PROCESSOR}")
 endif()
